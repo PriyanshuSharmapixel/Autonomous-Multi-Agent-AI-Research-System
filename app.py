@@ -11,7 +11,13 @@ same folder, alongside your `agents.py` module.
 import io
 import contextlib
 import traceback
+import os
+from dotenv import load_dotenv
 
+# 1. Load the hidden API keys FIRST
+load_dotenv()
+
+# 2. THEN import Streamlit and your pipeline
 import streamlit as st
 from pipeline import run_research_pipeline
 
