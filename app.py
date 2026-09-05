@@ -1,13 +1,3 @@
-"""
-Streamlit UI for the multi-agent research pipeline (pipeline.py).
-
-Run with:
-    streamlit run app.py
-
-This file expects `pipeline.py` (with `run_research_pipeline`) to be in the
-same folder, alongside your `agents.py` module.
-"""
-
 import io
 import contextlib
 import traceback
