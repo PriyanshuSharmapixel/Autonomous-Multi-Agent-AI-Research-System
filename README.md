@@ -1,104 +1,70 @@
-# Autonomous-Multi-Agent-AI-Research-System
+# Multi-Agent Research Assistant
 
-![GitHub stars](https://img.shields.io/github/stars/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System?style=for-the-badge&logo=github) ![GitHub forks](https://img.shields.io/github/forks/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System?style=for-the-badge&logo=github) ![GitHub issues](https://img.shields.io/github/issues/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System?style=for-the-badge&logo=github) ![Last commit](https://img.shields.io/github/last-commit/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System?style=for-the-badge&logo=github)
+A Streamlit application that turns a research topic into a structured report with web sources and a separate critique. The workflow combines two tool-using LangGraph agents with LangChain writing and review chains, using Tavily for search and Mistral for language generation.
 
-## 📑 Table of Contents
+## How a request moves through the system
 
-- [Description](#description)
-- [Tech Stack](#tech-stack)
-- [Quick Start](#quick-start)
-- [Key Dependencies](#key-dependencies)
-- [Project Structure](#project-structure)
-- [Development Setup](#development-setup)
-- [Contributors](#contributors)
-- [Contributing](#contributing)
+| Stage | Implementation | Output |
+| --- | --- | --- |
+| 1. Search | A ReAct agent calls `web_search`, which requests up to five Tavily results and formats their titles, URLs, and short snippets. | Search summary and source URLs |
+| 2. Read | A second ReAct agent receives the first 800 characters of that summary, chooses one URL, and calls `scrape_url` to extract page text with Requests and Beautiful Soup. | Up to 3,000 characters of cleaned page text |
+| 3. Write | A Mistral-backed prompt chain combines the search summary and extracted text to draft an introduction, at least three key findings, a conclusion, and a sources section. | Markdown-style research report |
+| 4. Critique | A separate prompt chain reviews the draft and returns a score out of 10, strengths, areas to improve, and a verdict. | Feedback shown alongside the report |
 
-## 📝 Description
+The stages run **sequentially**. A Python `state` dictionary carries `search_results`, `scraped_content`, `report`, and `feedback` between them. The critic evaluates the draft once; it does not automatically rewrite or approve it.
 
-Autonomous-Multi-Agent-AI-Research-System — a software project built with Python.
+## What the app provides
 
-## 🛠️ Tech Stack
+- Enter a topic and run the research workflow from a Streamlit form.
+- Inspect the report, critique, search output, extracted page text, and run logs in separate tabs.
+- Download the generated report as a Markdown file.
+- Revisit previous runs during the current Streamlit session or clear that session history.
+- Run the same pipeline from a terminal with `python pipeline.py`.
 
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+The app is a research **drafting aid**. Its source list is generated from search context, and the critique is an LLM response rather than an independent fact-check. Verify important claims against the linked sources before using a report.
 
-**Notable libraries:** LangChain
+## Tech stack
 
-## ⚡ Quick Start
+**Python · LangGraph · LangChain · Mistral (`mistral-small-latest`) · Tavily · Requests · Beautiful Soup · Streamlit**
 
-```bash
+The search and reader agents are created with LangGraph's `create_react_agent`. Writer and critic are LangChain prompt → model → string-parser chains. See [`agents.py`](agents.py), [`tools.py`](tools.py), and [`pipeline.py`](pipeline.py) for the respective components.
 
-# 1. Clone the repository
-git clone https://github.com/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System.git
+## Run locally
 
-# 2. Create & activate a virtualenv
-python -m venv venv && source venv/bin/activate
+1. Clone the repository and install dependencies:
 
-# 3. Install dependencies
-pip install -r requirements.txt
-```
+   ```bash
+   git clone https://github.com/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System.git
+   cd Autonomous-Multi-Agent-AI-Research-System
+   python -m venv .venv
+   # Activate .venv for your shell, then:
+   python -m pip install -r requirements.txt
+   ```
 
-## 📦 Key Dependencies
+2. Provide `MISTRAL_API_KEY` and `TAVILY_API_KEY` as environment variables in your local environment. The project loads environment variables with `python-dotenv`; keep credentials out of commits. An internet connection and access to both APIs are required.
+3. Start the web interface:
 
-```
-langchain: latest
-langchain-core: latest
-langgraph: latest
-langchain-mistralai: latest
-tavily-python: latest
-beautifulsoup4: latest
-requests: latest
-python-dotenv: latest
-rich: latest
-streamlit: latest
-```
+   ```bash
+   streamlit run app.py
+   ```
 
-## 📁 Project Structure
+   Alternatively, run `python pipeline.py` and enter a topic at the prompt. The terminal path prints each stage's output but does not provide the Streamlit history or download button.
 
-```
-.
-├── agents.py
-├── app.py
-├── pipeline.py
-├── requirements.txt
-└── tools.py
-```
+## Repository map
 
-## 🛠️ Development Setup
+| File | Responsibility |
+| --- | --- |
+| [`app.py`](app.py) | Streamlit form, progress display, session history, result tabs, and Markdown download |
+| [`pipeline.py`](pipeline.py) | Sequential orchestration and shared result state |
+| [`agents.py`](agents.py) | Mistral client, search and reader agents, writer and critic prompts |
+| [`tools.py`](tools.py) | Tavily search and single-page HTML text extraction |
+| [`requirements.txt`](requirements.txt) | Python dependencies |
 
-### Python
-1. Install Python (v3.10+ recommended)
-2. `python -m venv venv && source venv/bin/activate`  (Windows: `venv\Scripts\activate`)
-3. `pip install -r requirements.txt`
+## Current scope and next steps
 
-## 👥 Contributors
+- Each Tavily search tool call requests **at most five results**. The reader is prompted to select **one** page for deeper extraction. Sites that block scraping or return limited content can reduce report quality.
+- The search phase returns an error when it fails. A scrape failure is retained as a message so the writer can still proceed with the search summary.
+- The critic's score is displayed as text; there is no threshold, structured score parsing, source verification, or revision loop.
+- The repository does not include a benchmark dataset or recorded evaluation results. Runtime and score claims should be added only after repeatable testing.
 
-Thanks to everyone who has contributed to this project:
-
-<p align="left">
-<a href="https://github.com/PriyanshuSharmapixel" title="PriyanshuSharmapixel"><img src="https://avatars.githubusercontent.com/u/218453325?v=4&s=64" width="64" height="64" alt="PriyanshuSharmapixel" style="border-radius:50%" /></a>
-</p>
-
-[See the full list of contributors →](https://github.com/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System/graphs/contributors)
-
-## 👥 Contributing
-
-Contributions are welcome! Here's the standard flow:
-
-1. **Fork** the repository
-2. **Clone** your fork: `git clone https://github.com/PriyanshuSharmapixel/Autonomous-Multi-Agent-AI-Research-System.git`
-3. **Branch**: `git checkout -b feature/your-feature`
-4. **Commit**: `git commit -m 'feat: add some feature'`
-5. **Push**: `git push origin feature/your-feature`
-6. **Open** a pull request
-
-Please follow the existing code style and include tests for new behavior where applicable.
-
----
-
-<div align="center">
-
-[![Made with ReadmeBuddy](https://img.shields.io/badge/Made%20with-ReadmeBuddy-8B5CFF?style=for-the-badge&logo=markdown&logoColor=white)](https://readmebuddy.com)
-
-<sub>Generate beautiful READMEs in seconds → <a href="https://readmebuddy.com">readmebuddy.com</a></sub>
-
-</div>
+Useful next improvements are structured source records, per-claim citations, evaluation against a small set of manually reviewed topics, and a revision step that responds to critic feedback.
